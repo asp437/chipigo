@@ -1,9 +1,5 @@
 package main
 
-type CHIP8Memory struct {
-	d []uint8
-}
-
 type OpCode uint32
 type Registr uint8
 type CPUTimer uint8
@@ -55,6 +51,136 @@ type CHIP8CPU struct {
 	st CPUTimer // Sound timer
 }
 
+func (cpu* CHIP8CPU) init() {
+	cpu.v = make([]Registr, 16)
+	cpu.i = 0x200 // First 0x200 byte are interpreter
+	stack := new(Stack)
+	stack.init(16)
+}
+
+type CHIP8Memory_i interface {
+	init()
+	read(addr uint32) uint8
+	write(addr uint32, val uint8)
+	read2(addr uint32) uint16 // Read 2 byte. Special for opcode reading
+}
+
+type CHIP8Memory struct {
+	data []uint8
+}
+
+func (mem* CHIP8Memory) read(addr uint32) uint8 {
+	return mem.data[addr]
+}
+
+func (mem* CHIP8Memory) read2(addr uint32) uint16 {
+	return (uint16(mem.data[addr]) << 8) + uint16(mem.data[addr + 1])
+}
+
+func (mem* CHIP8Memory) write(addr uint32, val uint8) {
+	mem.data[addr] = val
+}
+
+func (mem* CHIP8Memory) init() {
+	mem.data = make([]uint8, 0x1000)
+
+	mem.data[0x0] = 0xF0 // ****
+	mem.data[0x1] = 0x90 // *  *
+	mem.data[0x2] = 0x90 // *  *
+	mem.data[0x3] = 0x90 // *  *
+	mem.data[0x4] = 0xF0 // ****
+
+	mem.data[0x5] = 0x20 //   * 
+	mem.data[0x6] = 0x60 //  ** 
+	mem.data[0x7] = 0x20 //   * 
+	mem.data[0x8] = 0x20 //   * 
+	mem.data[0x9] = 0x70 //  ***
+
+	mem.data[0xA] = 0xF0 // ****
+	mem.data[0xB] = 0x10 //    *
+	mem.data[0xC] = 0xF0 // ****
+	mem.data[0xD] = 0x80 // *   
+	mem.data[0xE] = 0xF0 // ****
+
+	mem.data[0xF ] = 0xF0 // ****
+	mem.data[0x10] = 0x10 //    *
+	mem.data[0x11] = 0xF0 // ****
+	mem.data[0x12] = 0x10 //    *
+	mem.data[0x13] = 0xF0 // ****
+
+	mem.data[0x14] = 0x90 // *  *
+	mem.data[0x15] = 0x90 // *  *
+	mem.data[0x16] = 0xF0 // ****
+	mem.data[0x17] = 0x10 //    *
+	mem.data[0x18] = 0x10 //    *
+
+	mem.data[0x19] = 0xF0 // ****
+	mem.data[0x1A] = 0x80 // *
+	mem.data[0x1B] = 0xF0 // ****
+	mem.data[0x1C] = 0x10 //    *
+	mem.data[0x1D] = 0xF0 // ****
+
+	mem.data[0x1E] = 0xF0 // ****
+	mem.data[0x1F] = 0x80 // *
+	mem.data[0x20] = 0xF0 // ****
+	mem.data[0x21] = 0x90 // *  *
+	mem.data[0x22] = 0xF0 // ****
+
+	mem.data[0x23] = 0xF0 // ****
+	mem.data[0x24] = 0x10 //    *
+	mem.data[0x25] = 0x20 //   *
+	mem.data[0x26] = 0x40 //  *
+	mem.data[0x27] = 0x40 //  *
+
+	mem.data[0x28] = 0xF0 // ****
+	mem.data[0x29] = 0x90 // *  *
+	mem.data[0x2A] = 0xF0 // ****
+	mem.data[0x2B] = 0x90 // *  *
+	mem.data[0x2C] = 0xF0 // ****
+
+	mem.data[0x2D] = 0xF0 // ****
+	mem.data[0x2E] = 0x90 // *  *
+	mem.data[0x2F] = 0xF0 // ****
+	mem.data[0x30] = 0x10 //    *
+	mem.data[0x31] = 0xF0 // ****
+
+	mem.data[0x32] = 0xF0 // ****
+	mem.data[0x33] = 0x90 // *  *
+	mem.data[0x34] = 0xF0 // ****
+	mem.data[0x35] = 0x90 // *  *
+	mem.data[0x36] = 0x90 // *  *
+
+	mem.data[0x37] = 0xE0 // ***
+	mem.data[0x38] = 0x90 // *  *
+	mem.data[0x39] = 0xE0 // ***
+	mem.data[0x3A] = 0x90 // *  *
+	mem.data[0x3B] = 0xE0 // ***
+
+	mem.data[0x3C] = 0xF0 // ****
+	mem.data[0x3D] = 0x80 // *
+	mem.data[0x3E] = 0x80 // *
+	mem.data[0x3F] = 0x80 // *
+	mem.data[0x40] = 0xF0 // ****
+
+	mem.data[0x41] = 0xE0 // ***
+	mem.data[0x42] = 0x90 // *  *
+	mem.data[0x43] = 0x90 // *  *
+	mem.data[0x44] = 0x90 // *  *
+	mem.data[0x45] = 0xE0 // ***
+
+	mem.data[0x46] = 0xF0 // ****
+	mem.data[0x47] = 0x80 // *
+	mem.data[0x48] = 0xF0 // ****
+	mem.data[0x49] = 0x80 // *
+	mem.data[0x4A] = 0xF0 // ****
+
+	mem.data[0x4B] = 0xF0 // ****
+	mem.data[0x4C] = 0x80 // *
+	mem.data[0x4D] = 0xF0 // ****
+	mem.data[0x4E] = 0x80 // *
+	mem.data[0x4F] = 0x80 // *
+}
+
 type CHIP8GPU_i interface {
 	clear_screen()
 	render()
@@ -90,8 +216,30 @@ func (gpu* CHIP8GPU) init() {
 	gpu.color = 0x11FF11 // Some kind of green
 }
 
-type CHIP8Input int // Not implemented
-type CHIP8Sound int // Not implemented
+type CHIP8Sound_i interface {
+	init()
+	turn_beep() // Change beep status from true to false and from false to true
+}
+
+type CHIP8Sound struct {
+	turn_on bool
+} // Not implemented
+
+func (sound* CHIP8Sound)init() {
+	sound.turn_on = false
+}
+
+func (sound* CHIP8Sound)turn_beep() {
+	sound.turn_on = !sound.turn_on
+}
+
+type CHIP8Input_i interface {
+	init()
+}
+
+type CHIP8Input struct {} // Not implemented
+
+func (input* CHIP8Input)init() {}
 
 type CHIP8Console_i interface {
 	init()
@@ -99,118 +247,11 @@ type CHIP8Console_i interface {
 }
 
 type CHIP8Console struct {
-	mem* CHIP8Memory
+	mem CHIP8Memory_i
 	cpu CHIP8CPU_i
 	gpu CHIP8GPU_i
-	input* CHIP8Input
-	sound* CHIP8Sound
-}
-
-func (cpu* CHIP8CPU) init() {
-	cpu.v = make([]Registr, 16)
-	cpu.i = 0x200 // First 0x200 byte are interpreter
-	stack := new(Stack)
-	stack.init(16)
-}
-
-func (mem* CHIP8Memory) init() {
-	mem.d = make([]uint8, 0x1000)
-
-	mem.d[0x0] = 0xF0 // ****
-	mem.d[0x1] = 0x90 // *  *
-	mem.d[0x2] = 0x90 // *  *
-	mem.d[0x3] = 0x90 // *  *
-	mem.d[0x4] = 0xF0 // ****
-
-	mem.d[0x5] = 0x20 //   * 
-	mem.d[0x6] = 0x60 //  ** 
-	mem.d[0x7] = 0x20 //   * 
-	mem.d[0x8] = 0x20 //   * 
-	mem.d[0x9] = 0x70 //  ***
-
-	mem.d[0xA] = 0xF0 // ****
-	mem.d[0xB] = 0x10 //    *
-	mem.d[0xC] = 0xF0 // ****
-	mem.d[0xD] = 0x80 // *   
-	mem.d[0xE] = 0xF0 // ****
-
-	mem.d[0xF ] = 0xF0 // ****
-	mem.d[0x10] = 0x10 //    *
-	mem.d[0x11] = 0xF0 // ****
-	mem.d[0x12] = 0x10 //    *
-	mem.d[0x13] = 0xF0 // ****
-
-	mem.d[0x14] = 0x90 // *  *
-	mem.d[0x15] = 0x90 // *  *
-	mem.d[0x16] = 0xF0 // ****
-	mem.d[0x17] = 0x10 //    *
-	mem.d[0x18] = 0x10 //    *
-
-	mem.d[0x19] = 0xF0 // ****
-	mem.d[0x1A] = 0x80 // *
-	mem.d[0x1B] = 0xF0 // ****
-	mem.d[0x1C] = 0x10 //    *
-	mem.d[0x1D] = 0xF0 // ****
-
-	mem.d[0x1E] = 0xF0 // ****
-	mem.d[0x1F] = 0x80 // *
-	mem.d[0x20] = 0xF0 // ****
-	mem.d[0x21] = 0x90 // *  *
-	mem.d[0x22] = 0xF0 // ****
-
-	mem.d[0x23] = 0xF0 // ****
-	mem.d[0x24] = 0x10 //    *
-	mem.d[0x25] = 0x20 //   *
-	mem.d[0x26] = 0x40 //  *
-	mem.d[0x27] = 0x40 //  *
-
-	mem.d[0x28] = 0xF0 // ****
-	mem.d[0x29] = 0x90 // *  *
-	mem.d[0x2A] = 0xF0 // ****
-	mem.d[0x2B] = 0x90 // *  *
-	mem.d[0x2C] = 0xF0 // ****
-
-	mem.d[0x2D] = 0xF0 // ****
-	mem.d[0x2E] = 0x90 // *  *
-	mem.d[0x2F] = 0xF0 // ****
-	mem.d[0x30] = 0x10 //    *
-	mem.d[0x31] = 0xF0 // ****
-
-	mem.d[0x32] = 0xF0 // ****
-	mem.d[0x33] = 0x90 // *  *
-	mem.d[0x34] = 0xF0 // ****
-	mem.d[0x35] = 0x90 // *  *
-	mem.d[0x36] = 0x90 // *  *
-
-	mem.d[0x37] = 0xE0 // ***
-	mem.d[0x38] = 0x90 // *  *
-	mem.d[0x39] = 0xE0 // ***
-	mem.d[0x3A] = 0x90 // *  *
-	mem.d[0x3B] = 0xE0 // ***
-
-	mem.d[0x3C] = 0xF0 // ****
-	mem.d[0x3D] = 0x80 // *
-	mem.d[0x3E] = 0x80 // *
-	mem.d[0x3F] = 0x80 // *
-	mem.d[0x40] = 0xF0 // ****
-
-	mem.d[0x41] = 0xE0 // ***
-	mem.d[0x42] = 0x90 // *  *
-	mem.d[0x43] = 0x90 // *  *
-	mem.d[0x44] = 0x90 // *  *
-	mem.d[0x45] = 0xE0 // ***
-
-	mem.d[0x46] = 0xF0 // ****
-	mem.d[0x47] = 0x80 // *
-	mem.d[0x48] = 0xF0 // ****
-	mem.d[0x49] = 0x80 // *
-	mem.d[0x4A] = 0xF0 // ****
-
-	mem.d[0x4B] = 0xF0 // ****
-	mem.d[0x4C] = 0x80 // *
-	mem.d[0x4D] = 0xF0 // ****
-	mem.d[0x4E] = 0x80 // *
-	mem.d[0x4F] = 0x80 // *
+	input CHIP8Input_i
+	sound CHIP8Sound_i
 }
 
 func (console* CHIP8Console) init() {
@@ -219,9 +260,12 @@ func (console* CHIP8Console) init() {
 	console.gpu = new(CHIP8GPU)
 	console.input = new(CHIP8Input)
 	console.sound = new(CHIP8Sound)
+
 	console.cpu.init()
 	console.mem.init()
 	console.gpu.init()
+	console.input.init()
+	console.sound.init()
 }
 
 func (console* CHIP8Console) tick(dt float32) {
