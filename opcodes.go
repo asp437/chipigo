@@ -156,7 +156,7 @@ func (cpu *CHIP8CPU) op_DXYN(op OpCode, console *CHIP8Console) { // DXYN -  Draw
 	y := uint8((op & 0x00F0) >> 8)
 	n := uint8(op & 0x00FF)
 	for i := 0; i < int(n); i++ {
-		console.gpu.draw_line8(uint8(cpu.v[x]), uint8(cpu.v[y])+uint8(i), console.mem.read(uint32(cpu.i)+uint32(i)))
+		cpu.v[0xF] = console.gpu.draw_line8(uint8(cpu.v[x]), uint8(cpu.v[y])+uint8(i), console.mem.read(uint32(cpu.i)+uint32(i)))
 	}
 }
 

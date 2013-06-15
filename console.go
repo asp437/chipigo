@@ -187,37 +187,54 @@ type CHIP8GPU_i interface {
 	clear_screen()
 	render()
 	init()
-	draw_line8(x, y, line uint8)
+	draw_line8(x, y, line uint8) Registr // Return new value of VF
 }
 
 type CHIP8GPU struct {
-	pic   [][]bool // Screen can display only black and some 1 color
-	w, h  int      // width and height of screen
-	color uint32   // color for filled pixels
+	pic   [][]uint8 // Screen can display only black and some 1 color
+	w, h  int       // width and height of screen
+	color uint32    // color for filled pixels
 } // Not full implemented yet
 
-func (gpu *CHIP8GPU) draw_line8(x, y, line uint8) {
-
+// The interpreter reads n bytes from memory, starting at the address stored in I.
+// These bytes are then displayed as sprites on screen at coordinates (Vx, Vy).
+// Sprites are XORed onto the existing screen.
+// If this causes any pixels to be erased, VF is set to 1, otherwise it is set to 0.
+// If the sprite is positioned so part of it is outside the coordinates of the display,
+// it wraps around to the opposite side of the screen.
+// See instruction 8XY3 for more information on XOR,
+// and section 2.4, Display, for more information on the Chip-8 screen and sprites.
+func (gpu *CHIP8GPU) draw_line8(x, y, line uint8) Registr {
+	ret := 0
+	for i := 0; i < 8; i++ {
+		new_pix := gpu.pic[x+uint8(i)][y] ^ (line>>uint(7-i))&1
+		if gpu.pic[x+uint8(i)][y] == 0 && new_pix == 1 {
+			ret = 1
+		}
+		gpu.pic[x+uint8(i)][y] = new_pix
+	}
+	return Registr(ret)
 }
 
 func (gpu *CHIP8GPU) clear_screen() {
 	for x := 0; x < gpu.w; x++ {
 		for y := 0; y < gpu.h; y++ {
-			gpu.pic[x][y] = false
+			gpu.pic[x][y] = 0
+
 		}
 	}
 }
 
-func (gpu *CHIP8GPU) render() {} // Not implemented
+func (gpu *CHIP8GPU) render() {} // Not implemented yet
 
 func (gpu *CHIP8GPU) init() {
 	gpu.w = 64
 	gpu.h = 32
-	gpu.pic = make([][]bool, gpu.w)
+	gpu.pic = make([][]uint8, gpu.w)
 	for x := 0; x < gpu.w; x++ {
-		gpu.pic[x] = make([]bool, gpu.h)
+		gpu.pic[x] = make([]uint8, gpu.h)
 		for y := 0; y < gpu.h; y++ {
-			gpu.pic[x][y] = false
+			gpu.pic[x][y] = 0
 		}
 	}
 	gpu.color = 0x11FF11 // Some kind of green
