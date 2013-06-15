@@ -220,7 +220,6 @@ func (gpu *CHIP8GPU) clear_screen() {
 	for x := 0; x < gpu.w; x++ {
 		for y := 0; y < gpu.h; y++ {
 			gpu.pic[x][y] = 0
-
 		}
 	}
 }

@@ -2,7 +2,7 @@ package main
 
 type Stack struct {
 	data []uint32
-	i uint16
+	i    uint16
 	size uint16
 }
 
