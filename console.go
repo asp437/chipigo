@@ -1,5 +1,10 @@
 package main
 
+import (
+	"github.com/go-gl/glfw"
+	"time"
+)
+
 type OpCode uint32
 type Registr uint8
 type CPUTimer uint8
@@ -41,6 +46,7 @@ type CHIP8CPU_i interface {
 	op_FX55(op OpCode, console *CHIP8Console) // FX55 - Stores V0 to VX in memory starting at address I.[4]
 	op_FX65(op OpCode, console *CHIP8Console) // FX65 - Fills V0 to VX with values from memory starting at address I.[4]
 	init()
+	timer_decrement()
 }
 
 type CHIP8CPU struct {
@@ -58,6 +64,11 @@ func (cpu *CHIP8CPU) init() {
 	cpu.i = 0x200 // First 0x200 byte are interpreter
 	stack := new(Stack)
 	stack.init(16)
+}
+
+func (cpu *CHIP8CPU) timer_decrement() {
+	cpu.dt--
+	cpu.st--
 }
 
 type CHIP8Memory_i interface {
@@ -242,6 +253,7 @@ func (gpu *CHIP8GPU) init() {
 type CHIP8Sound_i interface {
 	init()
 	turn_beep() // Change beep status from true to false and from false to true
+	tick()
 }
 
 type CHIP8Sound struct {
@@ -256,11 +268,12 @@ func (sound *CHIP8Sound) turn_beep() {
 	sound.turn_on = !sound.turn_on
 }
 
+func (sound *CHIP8Sound) tick() {}
+
 type CHIP8Input_i interface {
 	init()
 	is_pressed(key uint8) bool
-	key_down(key uint8)
-	key_up(key uint8)
+	tick()
 }
 
 type CHIP8Input struct {
@@ -275,12 +288,90 @@ func (input *CHIP8Input) is_pressed(key uint8) bool {
 	return input.keys[key]
 }
 
-func (input *CHIP8Input) key_down(key uint8) {
-	input.keys[key] = true
-}
+func (input *CHIP8Input) tick() {
+	if glfw.Key('1') == glfw.KeyPress {
+		input.keys[0x1] = true
+	} else {
+		input.keys[0x1] = false
+	}
+	if glfw.Key('2') == glfw.KeyPress {
+		input.keys[0x2] = true
+	} else {
+		input.keys[0x2] = false
+	}
+	if glfw.Key('3') == glfw.KeyPress {
+		input.keys[0x3] = true
+	} else {
+		input.keys[0x3] = false
+	}
+	if glfw.Key('4') == glfw.KeyPress {
+		input.keys[0xC] = true
+	} else {
+		input.keys[0xC] = false
+	}
 
-func (input *CHIP8Input) key_up(key uint8) {
-	input.keys[key] = false
+	if glfw.Key('Q') == glfw.KeyPress {
+		input.keys[0x4] = true
+	} else {
+		input.keys[0x4] = false
+	}
+	if glfw.Key('W') == glfw.KeyPress {
+		input.keys[0x5] = true
+	} else {
+		input.keys[0x5] = false
+	}
+	if glfw.Key('E') == glfw.KeyPress {
+		input.keys[0x6] = true
+	} else {
+		input.keys[0x6] = false
+	}
+	if glfw.Key('R') == glfw.KeyPress {
+		input.keys[0xD] = true
+	} else {
+		input.keys[0xD] = false
+	}
+
+	if glfw.Key('A') == glfw.KeyPress {
+		input.keys[0x7] = true
+	} else {
+		input.keys[0x7] = false
+	}
+	if glfw.Key('S') == glfw.KeyPress {
+		input.keys[0x8] = true
+	} else {
+		input.keys[0x8] = false
+	}
+	if glfw.Key('D') == glfw.KeyPress {
+		input.keys[0x9] = true
+	} else {
+		input.keys[0x9] = false
+	}
+	if glfw.Key('F') == glfw.KeyPress {
+		input.keys[0xE] = true
+	} else {
+		input.keys[0xE] = false
+	}
+
+	if glfw.Key('Z') == glfw.KeyPress {
+		input.keys[0xA] = true
+	} else {
+		input.keys[0xA] = false
+	}
+	if glfw.Key('X') == glfw.KeyPress {
+		input.keys[0x0] = true
+	} else {
+		input.keys[0x0] = false
+	}
+	if glfw.Key('C') == glfw.KeyPress {
+		input.keys[0xB] = true
+	} else {
+		input.keys[0xB] = false
+	}
+	if glfw.Key('V') == glfw.KeyPress {
+		input.keys[0xF] = true
+	} else {
+		input.keys[0xF] = false
+	}
 }
 
 type CHIP8Console_i interface {
@@ -303,6 +394,8 @@ func (console *CHIP8Console) init() {
 	console.gpu = new(CHIP8GPU)
 	console.input = new(CHIP8Input)
 	console.sound = new(CHIP8Sound)
+	glfw.Init()
+	glfw.OpenWindow(640, 320, 8, 8, 8, 8, 8, 0, glfw.Windowed)
 
 	console.cpu.init()
 	console.mem.init()
@@ -312,9 +405,29 @@ func (console *CHIP8Console) init() {
 }
 
 func (console *CHIP8Console) loop() {
-
+	var prev_time time.Time
+	for {
+		glfw.SwapBuffers()
+		glfw.PollEvents()
+		if glfw.Key(glfw.KeyEsc) == glfw.KeyPress || glfw.WindowParam(glfw.Opened) == 0 {
+			break
+		}
+		now_time := time.Now()
+		dt := float32((now_time.UnixNano() - prev_time.UnixNano()) / 1000000)
+		console.tick(dt)
+		prev_time = now_time
+	}
+	glfw.Terminate()
 }
 
 func (console *CHIP8Console) tick(dt float32) {
+	console.input.tick()
+	console.run_opcode()
+	console.cpu.timer_decrement()
+	console.gpu.render()
+	console.sound.tick()
+}
+
+func (console *CHIP8Console) run_opcode() { // Read and run opcode
 
 }
