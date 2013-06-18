@@ -5,7 +5,7 @@ import (
 )
 
 type Registr uint8
-type CPUTimer uint8
+type CPUTimer int8
 type OpCode uint16
 
 type CHIP8CPU_i interface {
@@ -66,8 +66,10 @@ func (cpu *CHIP8CPU) init() {
 	}
 	cpu.i = 0
 	cpu.pc = 0x200 // First 0x200 byte are interpreter
-	stack := new(Stack)
-	stack.init(16)
+	cpu.sp = new(Stack)
+	cpu.sp.init(16)
+	cpu.dt = 0
+	cpu.st = 0
 }
 
 func (cpu *CHIP8CPU) timer_decrement() {
@@ -78,6 +80,12 @@ func (cpu *CHIP8CPU) timer_decrement() {
 func (cpu *CHIP8CPU) tick(console *CHIP8Console) {
 	op := OpCode(console.mem.read2(uint32(cpu.pc)))
 	cpu.pc += 2
+	if cpu.st > 0 {
+		cpu.st--
+	}
+	if cpu.dt > 0 {
+		cpu.dt--
+	}
 	switch uint16(op) & 0xF000 {
 	case 0x0000:
 		switch uint16(op) & 0xFFFF {
@@ -171,11 +179,5 @@ func (cpu *CHIP8CPU) tick(console *CHIP8Console) {
 		}
 	default:
 		fmt.Printf("Unknown opcode\n")
-	}
-	if cpu.st > 0 {
-		cpu.st--
-	}
-	if cpu.dt > 0 {
-		cpu.dt--
 	}
 }

@@ -8,7 +8,7 @@ import (
 type CHIP8Console_i interface {
 	init(str string)
 	loop()
-	tick(dt float32)
+	tick()
 }
 
 type CHIP8Console struct {
@@ -35,22 +35,18 @@ func (console *CHIP8Console) init(str string) {
 }
 
 func (console *CHIP8Console) loop() {
-	var prev_time time.Time
 	for {
 		glfw.PollEvents()
 		if glfw.Key(glfw.KeyEsc) == glfw.KeyPress || glfw.WindowParam(glfw.Opened) == 0 {
 			break
 		}
-		now_time := time.Now()
-		dt := float32((now_time.UnixNano() - prev_time.UnixNano()) / 1000000)
-		console.tick(dt)
-		prev_time = now_time
-		time.Sleep(1 * time.Millisecond)
+		console.tick()
+		time.Sleep(10 * time.Millisecond)
 	}
 	glfw.Terminate()
 }
 
-func (console *CHIP8Console) tick(dt float32) {
+func (console *CHIP8Console) tick() {
 	console.input.tick()
 	console.cpu.tick(console)
 	console.gpu.render()

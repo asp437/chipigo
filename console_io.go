@@ -9,7 +9,7 @@ type CHIP8GPU_i interface {
 	clear_screen()
 	render()
 	init()
-	draw_line8(x, y, line uint8) Registr // Return new value of VF
+	draw_line8(x, y int8, line uint8) Registr // Return new value of VF
 }
 
 type CHIP8GPU struct {
@@ -26,15 +26,21 @@ type CHIP8GPU struct {
 // it wraps around to the opposite side of the screen.
 // See instruction 8XY3 for more information on XOR,
 // and section 2.4, Display, for more information on the Chip-8 screen and sprites.
-func (gpu *CHIP8GPU) draw_line8(x, y, line uint8) Registr {
+func (gpu *CHIP8GPU) draw_line8(x, y int8, line uint8) Registr {
 	ret := 0
 	if y >= 32 {
 		y -= 32
 	}
+	for y < 0 {
+		y += 32
+	}
 	for i := 0; i < 8; i++ {
-		xp := x + uint8(i)
+		xp := x + int8(i)
 		if xp >= 64 {
 			xp -= 64
+		}
+		for xp < 0 {
+			xp += 64
 		}
 		new_pix := (gpu.pic[xp][y] & 1) ^ ((line >> uint(7-i)) & 1)
 		if gpu.pic[xp][y] == 1 && new_pix == 0 {
@@ -70,7 +76,7 @@ func (gpu *CHIP8GPU) render() {
 		}
 	}
 	glfw.SwapBuffers()
-} // Not implemented yet
+}
 
 func (gpu *CHIP8GPU) init() {
 	gpu.w = 64
@@ -125,99 +131,50 @@ type CHIP8Input_i interface {
 }
 
 type CHIP8Input struct {
-	keys []bool
+	keys int
 }
 
 func (input *CHIP8Input) init() {
-	input.keys = make([]bool, 16)
+	input.keys = -255
 }
 
 func (input *CHIP8Input) is_pressed(key uint8) bool {
-	return input.keys[key]
+	return (input.keys == int(key))
 }
 
 func (input *CHIP8Input) tick() {
+	input.keys = -255
 	if glfw.Key('1') == glfw.KeyPress {
-		input.keys[0x1] = true
-	} else {
-		input.keys[0x1] = false
-	}
-	if glfw.Key('2') == glfw.KeyPress {
-		input.keys[0x2] = true
-	} else {
-		input.keys[0x2] = false
-	}
-	if glfw.Key('3') == glfw.KeyPress {
-		input.keys[0x3] = true
-	} else {
-		input.keys[0x3] = false
-	}
-	if glfw.Key('4') == glfw.KeyPress {
-		input.keys[0xC] = true
-	} else {
-		input.keys[0xC] = false
-	}
-
-	if glfw.Key('Q') == glfw.KeyPress {
-		input.keys[0x4] = true
-	} else {
-		input.keys[0x4] = false
-	}
-	if glfw.Key('W') == glfw.KeyPress {
-		input.keys[0x5] = true
-	} else {
-		input.keys[0x5] = false
-	}
-	if glfw.Key('E') == glfw.KeyPress {
-		input.keys[0x6] = true
-	} else {
-		input.keys[0x6] = false
-	}
-	if glfw.Key('R') == glfw.KeyPress {
-		input.keys[0xD] = true
-	} else {
-		input.keys[0xD] = false
-	}
-
-	if glfw.Key('A') == glfw.KeyPress {
-		input.keys[0x7] = true
-	} else {
-		input.keys[0x7] = false
-	}
-	if glfw.Key('S') == glfw.KeyPress {
-		input.keys[0x8] = true
-	} else {
-		input.keys[0x8] = false
-	}
-	if glfw.Key('D') == glfw.KeyPress {
-		input.keys[0x9] = true
-	} else {
-		input.keys[0x9] = false
-	}
-	if glfw.Key('F') == glfw.KeyPress {
-		input.keys[0xE] = true
-	} else {
-		input.keys[0xE] = false
-	}
-
-	if glfw.Key('Z') == glfw.KeyPress {
-		input.keys[0xA] = true
-	} else {
-		input.keys[0xA] = false
-	}
-	if glfw.Key('X') == glfw.KeyPress {
-		input.keys[0x0] = true
-	} else {
-		input.keys[0x0] = false
-	}
-	if glfw.Key('C') == glfw.KeyPress {
-		input.keys[0xB] = true
-	} else {
-		input.keys[0xB] = false
-	}
-	if glfw.Key('V') == glfw.KeyPress {
-		input.keys[0xF] = true
-	} else {
-		input.keys[0xF] = false
+		input.keys = 0x1
+	} else if glfw.Key('2') == glfw.KeyPress {
+		input.keys = 0x2
+	} else if glfw.Key('3') == glfw.KeyPress {
+		input.keys = 0x3
+	} else if glfw.Key('4') == glfw.KeyPress {
+		input.keys = 0xC
+	} else if glfw.Key('Q') == glfw.KeyPress {
+		input.keys = 0x4
+	} else if glfw.Key('W') == glfw.KeyPress {
+		input.keys = 0x5
+	} else if glfw.Key('E') == glfw.KeyPress {
+		input.keys = 0x6
+	} else if glfw.Key('R') == glfw.KeyPress {
+		input.keys = 0xD
+	} else if glfw.Key('A') == glfw.KeyPress {
+		input.keys = 0x7
+	} else if glfw.Key('S') == glfw.KeyPress {
+		input.keys = 0x8
+	} else if glfw.Key('D') == glfw.KeyPress {
+		input.keys = 0x9
+	} else if glfw.Key('F') == glfw.KeyPress {
+		input.keys = 0xE
+	} else if glfw.Key('Z') == glfw.KeyPress {
+		input.keys = 0xA
+	} else if glfw.Key('X') == glfw.KeyPress {
+		input.keys = 0x0
+	} else if glfw.Key('C') == glfw.KeyPress {
+		input.keys = 0xB
+	} else if glfw.Key('V') == glfw.KeyPress {
+		input.keys = 0xF
 	}
 }
