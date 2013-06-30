@@ -35,12 +35,27 @@ func (console *CHIP8Console) init(str string) {
 }
 
 func (console *CHIP8Console) loop() {
+	cycles_per_second := 1000.0
+	one_cycle_in_ms := 1000.0 / cycles_per_second
+	var last_time, new_time, unprocessed float64
+	last_time = glfw.Time() * 1000
+	new_time = glfw.Time() * 1000
+	unprocessed = 0.0
 	for {
+		last_time = new_time
+		new_time = glfw.Time() * 1000
+		unprocessed += new_time - last_time
 		glfw.PollEvents()
 		if glfw.Key(glfw.KeyEsc) == glfw.KeyPress || glfw.WindowParam(glfw.Opened) == 0 {
 			break
 		}
-		console.tick()
+		for unprocessed > one_cycle_in_ms {
+			if glfw.Key(glfw.KeyEsc) == glfw.KeyPress || glfw.WindowParam(glfw.Opened) == 0 {
+				break
+			}
+			console.tick()
+			unprocessed -= one_cycle_in_ms
+		}
 		time.Sleep(10 * time.Millisecond)
 	}
 	glfw.Terminate()
