@@ -5,7 +5,7 @@ import (
 )
 
 type Registr uint8
-type CPUTimer int8
+type CPUTimer uint8
 type OpCode uint16
 
 type CHIP8CPU_i interface {
@@ -78,14 +78,14 @@ func (cpu *CHIP8CPU) timer_decrement() {
 }
 
 func (cpu *CHIP8CPU) tick(console *CHIP8Console) {
-	op := OpCode(console.mem.read2(uint32(cpu.pc)))
-	cpu.pc += 2
 	if cpu.st > 0 {
 		cpu.st--
 	}
 	if cpu.dt > 0 {
 		cpu.dt--
 	}
+	op := OpCode(console.mem.read2(uint32(cpu.pc)))
+	cpu.pc += 2
 	switch uint16(op) & 0xF000 {
 	case 0x0000:
 		switch uint16(op) & 0xFFFF {
@@ -160,14 +160,12 @@ func (cpu *CHIP8CPU) tick(console *CHIP8Console) {
 			cpu.op_FX0A(op, console)
 		case 0x0015:
 			cpu.op_FX15(op, console)
-
 		case 0x0018:
 			cpu.op_FX18(op, console)
 		case 0x001E:
 			cpu.op_FX1E(op, console)
 		case 0x0029:
 			cpu.op_FX29(op, console)
-
 		case 0x0033:
 			cpu.op_FX33(op, console)
 		case 0x0055:

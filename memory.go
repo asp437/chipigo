@@ -21,7 +21,7 @@ func (mem *CHIP8Memory) read(addr uint32) uint8 {
 }
 
 func (mem *CHIP8Memory) read2(addr uint32) uint16 {
-	return (uint16(mem.data[addr]) << 8) + uint16(mem.data[addr+1])
+	return (uint16(mem.data[addr]) << 8) | uint16(mem.data[addr+1])
 }
 
 func (mem *CHIP8Memory) write(addr uint32, val uint8) {

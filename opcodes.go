@@ -8,23 +8,20 @@ import (
 func (cpu *CHIP8CPU) op_0NNN(op OpCode, console *CHIP8Console) { // 0NNN - Calls RCA 1802 program at address NNN.
 	fmt.Printf("0NNN is not supported\n")
 }
+
 func (cpu *CHIP8CPU) op_00E0(op OpCode, console *CHIP8Console) { // 00E0 - Clears the screen.
 	console.gpu.clear_screen()
 }
 
 func (cpu *CHIP8CPU) op_00EE(op OpCode, console *CHIP8Console) { // 00EE - Returns from a subroutine.
-	p := uint16(cpu.sp.pop())
-	// fmt.Printf("Return from subroutine at %X to %X\n", cpu.pc, p)
-	cpu.pc = p
+	cpu.pc = uint16(cpu.sp.pop())
 }
 
 func (cpu *CHIP8CPU) op_1NNN(op OpCode, console *CHIP8Console) { // 1NNN - Jumps to address NNN.
-	n := uint16(op & 0xFFF)
-	cpu.pc = n
+	cpu.pc = uint16(op & 0xFFF)
 }
 
 func (cpu *CHIP8CPU) op_2NNN(op OpCode, console *CHIP8Console) { // 2NNN - Calls subroutine at NNN.
-	// fmt.Printf("Call subroutine at %X from %X\n", op&0x0FFF, uint32(cpu.pc))
 	cpu.sp.push(uint32(cpu.pc))
 	cpu.pc = uint16(op & 0x0FFF)
 }
@@ -92,7 +89,8 @@ func (cpu *CHIP8CPU) op_8XY3(op OpCode, console *CHIP8Console) { // 8XY3 - Sets 
 func (cpu *CHIP8CPU) op_8XY4(op OpCode, console *CHIP8Console) { // 8XY4 - Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
 	x := uint16((op & 0x0F00) >> 8)
 	y := uint16((op & 0x00F0) >> 4)
-	sum := uint32(cpu.v[x]) + uint32(cpu.v[y])
+	var sum uint16
+	sum = uint16(cpu.v[x]) + uint16(cpu.v[y])
 	if sum > 0xFF {
 		cpu.v[0xF] = 1
 	} else {
@@ -160,13 +158,14 @@ func (cpu *CHIP8CPU) op_CXNN(op OpCode, console *CHIP8Console) { // CXNN -  Sets
 func (cpu *CHIP8CPU) op_DXYN(op OpCode, console *CHIP8Console) { // DXYN -  Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels. Each row of 8 pixels is read as bit-coded (with the most significant bit of each byte displayed on the left) starting from memory location I; I value doesn't change after the execution of this instruction. As described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesn't happen.
 	x := uint16((op & 0x0F00) >> 8)
 	y := uint16((op & 0x00F0) >> 4)
-	n := int8(op & 0x000F)
-	var vx, vy, i int8
+	n := uint16(op & 0x000F)
+	var vx, vy int8
+	var i uint16
 	vx = int8(cpu.v[x])
 	vy = int8(cpu.v[y])
 	cpu.v[0xF] = 0
 	for i = 0; i < n; i++ {
-		if console.gpu.draw_line8(vx, vy+i, console.mem.read(uint32(cpu.i)+uint32(i))) == 1 {
+		if console.gpu.draw_line8(vx, vy+int8(i), console.mem.read(uint32(cpu.i+i))) == 1 {
 			cpu.v[0xF] = 1
 		}
 	}
@@ -193,7 +192,7 @@ func (cpu *CHIP8CPU) op_FX07(op OpCode, console *CHIP8Console) { // FX07 -  Sets
 
 func (cpu *CHIP8CPU) op_FX0A(op OpCode, console *CHIP8Console) { // FX0A -  A key press is awaited, and then stored in VX.
 	x := uint16((op & 0x0F00) >> 8)
-	for i := 0; i < 0x10; i++ {
+	for i := 0; i <= 0xF; i++ {
 		if console.input.is_pressed(uint8(i)) {
 			cpu.v[x] = Registr(i)
 			return
@@ -216,7 +215,7 @@ func (cpu *CHIP8CPU) op_FX1E(op OpCode, console *CHIP8Console) { // FX1E -  Adds
 	// Note: VF is set to 1 when range overflow (I+VX>0xFFF), and 0 when there isn't.
 	// This is undocumented feature of the Chip-8 and used by Spacefight 2019! game.
 	x := uint16((op & 0x0F00) >> 8)
-	cpu.i += x
+	cpu.i += uint16(cpu.v[x])
 	if cpu.i > 0xFFF {
 		cpu.v[0xF] = 1
 	} else {
@@ -226,7 +225,7 @@ func (cpu *CHIP8CPU) op_FX1E(op OpCode, console *CHIP8Console) { // FX1E -  Adds
 
 func (cpu *CHIP8CPU) op_FX29(op OpCode, console *CHIP8Console) { // FX29 -  Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font.
 	x := uint16((op & 0x0F00) >> 8)
-	cpu.i = uint16(cpu.v[x] * 0x5) // 0x5 == size of one char in bytes
+	cpu.i = uint16(cpu.v[x]) * 0x5 // 0x5 == size of one char in bytes
 }
 
 func (cpu *CHIP8CPU) op_FX33(op OpCode, console *CHIP8Console) { // FX33 -  Stores the Binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
@@ -244,7 +243,7 @@ func (cpu *CHIP8CPU) op_FX55(op OpCode, console *CHIP8Console) { // FX55 -  Stor
 	x := uint16((op & 0x0F00) >> 8)
 	var i uint16
 	for i = 0; i <= x; i++ {
-		console.mem.write(uint32(cpu.i)+uint32(i), uint8(cpu.v[i]))
+		console.mem.write(uint32(cpu.i+i), uint8(cpu.v[i]))
 	}
 }
 
@@ -252,7 +251,7 @@ func (cpu *CHIP8CPU) op_FX65(op OpCode, console *CHIP8Console) { // FX65 -  Fill
 	x := uint16((op & 0x0F00) >> 8)
 	var i uint16
 	for i = 0; i <= x; i++ {
-		cpu.v[i] = Registr(console.mem.read(uint32(cpu.i) + uint32(i)))
+		cpu.v[i] = Registr(console.mem.read(uint32(cpu.i + i)))
 	}
 }
 
