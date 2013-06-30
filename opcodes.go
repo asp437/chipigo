@@ -14,7 +14,14 @@ func (cpu *CHIP8CPU) op_00E0(op OpCode, console *CHIP8Console) { // 00E0 - Clear
 }
 
 func (cpu *CHIP8CPU) op_00EE(op OpCode, console *CHIP8Console) { // 00EE - Returns from a subroutine.
-	cpu.pc = uint16(cpu.sp.pop())
+	var addr uint16
+	cpu.sp += 2
+	if cpu.sp > 0x70 {
+		fmt.Printf("Stack underflow\n")
+	}
+	addr = 0
+	addr |= console.mem.read2(uint32(cpu.sp))
+	cpu.pc = addr
 }
 
 func (cpu *CHIP8CPU) op_1NNN(op OpCode, console *CHIP8Console) { // 1NNN - Jumps to address NNN.
@@ -22,7 +29,12 @@ func (cpu *CHIP8CPU) op_1NNN(op OpCode, console *CHIP8Console) { // 1NNN - Jumps
 }
 
 func (cpu *CHIP8CPU) op_2NNN(op OpCode, console *CHIP8Console) { // 2NNN - Calls subroutine at NNN.
-	cpu.sp.push(uint32(cpu.pc))
+	console.mem.write(uint32(cpu.sp), uint8(cpu.pc&0xFF00>>8))
+	console.mem.write(uint32(cpu.sp+1), uint8(cpu.pc&0x00FF))
+	cpu.sp -= 2
+	if cpu.sp < 0x50 {
+		fmt.Printf("Stack overflow\n")
+	}
 	cpu.pc = uint16(op & 0x0FFF)
 }
 

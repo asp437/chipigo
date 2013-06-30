@@ -54,7 +54,7 @@ type CHIP8CPU struct {
 	v  []Registr // V0 - VF registers
 	i  uint16    // I register
 	pc uint16    // Currently executing address
-	sp *Stack    // CPU Stack
+	sp uint16    // Stack pointer (for implement stack in consoe memory)
 	dt CPUTimer  // Delay timer
 	st CPUTimer  // Sound timer
 }
@@ -66,8 +66,7 @@ func (cpu *CHIP8CPU) init() {
 	}
 	cpu.i = 0
 	cpu.pc = 0x200 // First 0x200 byte are interpreter
-	cpu.sp = new(Stack)
-	cpu.sp.init(16)
+	cpu.sp = 0x70
 	cpu.dt = 0
 	cpu.st = 0
 }
